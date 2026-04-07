@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mapa Sanitario - Municipalidad de Córdoba</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Arial, sans-serif;
+      color: #020202;
+    }
+
+    #map {
+      position: absolute;
+      top: 0; bottom: 0;
+      left: 380px; right: 0;
+      z-index: 1;
+    }
+
+    /* ========== SIDEBAR ========== */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 380px;
+      height: 100%;
+      background: #FAFAFC;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.18);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* MODIFICACIÓN: Estilo para la cabecera azul con logos */
+    .sidebar-header {
+      background: #005288;
+      padding: 15px 14px;
+      flex-shrink: 0;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between; /* Logos a los extremos */
+      gap: 12px;
+    }
+
+    .logo-row img { 
+      height: 42px; 
+      width: auto; 
+      object-fit: contain; 
+    }
+
+    /* Barra tricolor */
+    .header-bars { display: flex; height: 4px; width: 100%; flex-shrink: 0; }
+    .header-bars .bar { flex: 1; }
+
+    /* MODIFICACIÓN: Contenedor para el título blanco */
+    .title-container {
+      background: #ffffff;
+      padding: 18px 15px 12px 15px;
+      flex-shrink: 0;
+    }
+
+    .page-title {
+      color: #005288;
+      font-size: 22px;
+      font-weight: 700;
+      text-align: left;
+      line-height: 1.15;
+      margin: 0;
+    }
+
+    .stats-container {
+      padding: 10px 12px;
+      background: #FAFAFC;
+      flex-shrink: 0;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #005288 0%, #0070b8 100%);
+      padding: 12px 14px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,82,136,0.2);
+    }
+
+    .stat-label {
+      color: rgba(255,255,255,0.8);
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 5px;
+    }
+
+    .stat-value {
+      color: #ffffff;
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .search-container {
+      padding: 10px 12px 6px 12px;
+      background: #FAFAFC;
+      flex-shrink: 0;
+    }
+
+    #search-efector {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 7px;
+      border: 1px solid #d0d7de;
+      font-size: 13px;
+      font-family: inherit;
+      background: #fff;
+      color: #2c3e50;
+      transition: border-color 0.2s;
+    }
+
+    #search-efector:focus {
+      outline: none;
+      border-color: #005288;
+      box-shadow: 0 0 0 2px rgba(0,82,136,0.12);
+    }
+
+    #search-efector::placeholder { color: #a0aec0; }
+
+    .legend-icons {
+      padding: 6px 12px 8px 12px;
+      background: #FAFAFC;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(0,0,0,0.07);
+    }
+
+    .legend-icons-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #005288;
+      letter-spacing: 0.4px;
+      margin-bottom: 5px;
+    }
+
+    .legend-icon-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: #2c3e50;
+      font-weight: 500;
+    }
+
+    .legend-icon-row img { height: 22px; width: auto; }
+
+    .filters-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 14px 14px 14px;
+      background: #FAFAFC;
+      will-change: scroll-position;
+    }
+
+    .filters-container::-webkit-scrollbar { width: 4px; }
+    .filters-container::-webkit-scrollbar-track { background: rgba(0,0,0,0.04); }
+    .filters-container::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+
+    .filter-section { margin-bottom: 11px; }
+
+    .filter-header {
+      color: #005288;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .filter-group-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #999;
+      letter-spacing: 0.4px;
+      margin: 12px 0 6px 0;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+
+    /* Dropdown moderno */
+    .ms-wrap { position: relative; width: 100%; margin-bottom: 4px; }
+
+    .ms-btn {
+      width: 100%;
+      padding: 10px 32px 10px 14px;
+      border-radius: 7px;
+      border: 1px solid rgba(0,0,0,0.1);
+      background: #ffffff;
+      color: #2c3e50;
+      text-align: left;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      transition: all 0.2s;
+      position: relative;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ms-btn:hover { background: #f1f3f5; border-color: #005288; }
+
+    .ms-btn::after {
+      content: '▼';
+      position: absolute;
+      right: 11px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 8px;
+      color: #a0aec0;
+    }
+
+    .ms-drop {
+      position: absolute;
+      top: 42px; left: 0; right: 0;
+      background: #fff;
+      border: 1px solid #dde1e7;
+      border-radius: 9px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+      display: none;
+      z-index: 3000;
+      max-height: 240px;
+      overflow: hidden;
+    }
+
+    .ms-drop.open { display: block; }
+
+    .ms-actions {
+      display: flex;
+      gap: 5px;
+      padding: 7px 8px;
+      border-bottom: 1px solid #eee;
+      background: #f8f9fa;
+      position: sticky; top: 0; z-index: 10;
+    }
+
+    .ms-actions button {
+      flex: 1;
+      padding: 5px 6px;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 10px;
+      font-weight: 600;
+      color: #2c3e50;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .ms-actions button:hover { background: #f1f3f5; border-color: #005288; }
+    .ms-actions .right { background: #005288; color: white; border-color: #004070; }
+    .ms-actions .right:hover { background: #004070; }
+
+    .ms-list { max-height: 170px; overflow-y: auto; }
+
+    .ms-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .ms-item:hover { background: #f1f5f9; }
+
+    .ms-item input[type="checkbox"] {
+      width: 14px; height: 14px;
+      cursor: pointer;
+      accent-color: #005288;
+    }
+
+    .ms-item span { font-size: 13px; color: #2c3e50; font-weight: 500; }
+
+    /* Checkboxes simples */
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #2c3e50;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 7px 10px;
+      border-radius: 7px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: #fff;
+      transition: background 0.15s;
+      margin-bottom: 4px;
+    }
+
+    .checkbox-label:hover { background: #f1f5f9; }
+
+    .checkbox-label input[type="checkbox"] {
+      width: 14px; height: 14px;
+      accent-color: #005288;
+      cursor: pointer;
+    }
+
+    .clear-filters-btn {
+      width: 100%;
+      padding: 10px;
+      background: linear-gradient(135deg, #005288 0%, #0070b8 100%);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0,82,136,0.2);
+      margin-top: 6px;
+    }
+
+    .clear-filters-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(0,82,136,0.3);
+    }
+
+    .status-container {
+      padding: 7px 12px;
+      background: #005288;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      flex-shrink: 0;
+    }
+
+    .status-text { color: rgba(255,255,255,0.6); font-size: 10px; text-align: center; }
+    .status-text.success { color: rgba(255,255,255,0.95); }
+
+    /* Panel info zona */
+    #zona-info {
+      display: none;
+      position: absolute;
+      top: 20px; right: 20px;
+      background: #fff;
+      padding: 14px;
+      border-radius: 9px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      font-family: inherit;
+      z-index: 1100;
+      width: 300px;
+      flex-direction: column;
+      max-height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+
+    #zona-titulo {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #005288;
+      text-align: center;
+    }
+
+    #all-zones-summary-panel {
+      display: none;
+      position: absolute;
+      top: 20px; right: 20px;
+      background: #fff;
+      padding: 14px;
+      border-radius: 9px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      font-family: inherit;
+      z-index: 1100;
+      width: 260px;
+      flex-direction: column;
+      max-height: calc(100vh - 60px);
+      overflow-y: auto;
+    }
+
+    #all-zones-summary-panel h3 {
+      font-weight: 700; font-size: 14px;
+      margin-bottom: 8px; color: #005288; text-align: center;
+    }
+
+    #all-zones-summary-panel ul { list-style: none; padding: 0; margin: 0; font-size: 13px; }
+
+    #all-zones-summary-panel li {
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #all-zones-summary-panel li:last-child { border-bottom: none; }
+    #all-zones-summary-panel li .zone-name { font-weight: 600; color: #333; }
+    #all-zones-summary-panel li .zone-population { color: #005288; font-weight: 700; }
+
+    /* Etiquetas en mapa */
+    .layer-label {
+      position: absolute;
+      background-color: transparent;
+      color: #000;
+      font-weight: 600;
+      font-size: 13px;
+      text-align: center;
+      white-space: nowrap;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      text-shadow:
+        -1px -1px 3px rgba(255,255,255,0.9),
+         1px -1px 3px rgba(255,255,255,0.9),
+        -1px  1px 3px rgba(255,255,255,0.9),
+         1px  1px 3px rgba(255,255,255,0.9),
+             0  0   5px rgba(255,255,255,0.7);
+    }
+
+    /* Tooltips de zonas */
+    .leaflet-tooltip {
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 12px;
+      line-height: 1.5;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,82,136,0.2);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 100%; height: auto; max-height: 55vh; position: relative; }
+      #map { left: 0; top: 55vh; height: 45vh; }
+    }
+    @media (min-width: 769px) and (max-width: 1100px) {
+      .sidebar { width: 340px; }
+      #map { left: 340px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <div id="zona-info">
+    <div id="zona-titulo">Población de Zona</div>
+    <div id="zona-datos"></div>
+  </div>
+
+  <div id="all-zones-summary-panel">
+    <h3>Población por Zona</h3>
+    <div id="total-capital-population" style="display:none;"></div>
+    <ul id="all-zones-list"></ul>
+  </div>
+
+  <div class="sidebar">
+
+    <div class="sidebar-header">
+      <div class="logo-row">
+        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/SecreB.png" alt="Secretaría de Salud" />
+        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/HorizontalCTWhite.png" alt="Coordinación Tecnológica" />
+      </div>
+    </div>
+
+    <div class="header-bars">
+      <div class="bar" style="background:#FFDA63;"></div>
+      <div class="bar" style="background:#DC3545;"></div>
+      <div class="bar" style="background:#007BFF;"></div>
+    </div>
+
+    <div class="title-container">
+      <h1 class="page-title">Mapa Sanitario<br>Municipalidad de Córdoba</h1>
+    </div>
+
+    <div class="stats-container">
+      <div class="stat-card">
+        <div class="stat-label">Población Total — Ciudad de Córdoba</div>
+        <div class="stat-value" id="statPoblacion">Cargando…</div>
+      </div>
+    </div>
+
+    <div class="search-container">
+      <input type="text" id="search-efector" placeholder="🔍 Buscar efector..." />
+    </div>
+
+    <div class="legend-icons">
+      <div class="legend-icons-title">Referencias</div>
+      <div class="legend-icon-row">
+        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/CS.png"> Centros de Salud
+      </div>
+      <div class="legend-icon-row">
+        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/HOSP-HPA-PLM.png"> Hospitales / HPA / P. La Monaca
+      </div>
+      <div class="legend-icon-row">
+        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/EFECTORES.png"> Efectores Municipales
+      </div>
+    </div>
+
+    <div class="filters-container">
+
+      <div class="filter-section">
+        <div class="filter-header">📍 Zona Sanitaria</div>
+        <div class="ms-wrap" id="zonaWrap">
+          <button class="ms-btn" id="zonaBtn">-- Seleccionar Zona --</button>
+          <div class="ms-drop" id="zonaDrop">
+            <div class="ms-actions">
+              <button type="button" id="zonaAll">Todas</button>
+              <button type="button" id="zonaNone">Ninguna</button>
+              <button type="button" id="zonaApply" class="right">Aplicar</button>
+            </div>
+            <div class="ms-list" id="zonaList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group-label">Capas a Nivel Capital</div>
+
+      <div class="filter-section">
+        <div class="filter-header">🗺️ Seccionales</div>
+        <div class="ms-wrap" id="seccionalesWrap">
+          <button class="ms-btn" id="seccionalesBtn">Ninguna</button>
+          <div class="ms-drop" id="seccionalesDrop">
+            <div class="ms-actions">
+              <button type="button" id="seccionalesAll">Todas</button>
+              <button type="button" id="seccionalesNone">Ninguna</button>
+              <button type="button" id="seccionalesApply" class="right">Aplicar</button>
+            </div>
+            <div class="ms-list" id="seccionalesList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-header">🔷 Circuitos</div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkCIRCUITO" /> Mostrar Circuitos
+        </label>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-header">🏥 Áreas Programáticas</div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkAP" /> Mostrar Áreas Programáticas
+        </label>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-header"></div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkENTEMETROPOLITANO" /> Mostrar Ente Metropolitano
+        </label>
+      </div>
+
+      <div class="filter-group-label">Capas a Nivel Provincia</div>
+
+      <div class="filter-section">
+        <div class="filter-header">🏛️ Departamentos</div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkDEPARTAMENTOS" /> Mostrar Departamentos
+        </label>
+      </div>
+
+      <div class="filter-section">
+        <div class="filter-header">📌 Localidades</div>
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkLOCALIDADES" /> Mostrar Localidades
+        </label>
+      </div>
+
+      <button class="clear-filters-btn" id="clearFiltersBtn">🧹 Limpiar Todos los Filtros</button>
+
+    </div>
+
+    <div class="status-container">
+      <div class="status-text" id="status">Cargando datos...</div>
+    </div>
+
+  </div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+
+    // ── Helpers ──
+    const setStatus = (t, ok = false) => {
+      const el = document.getElementById('status');
+      el.textContent = t;
+      el.className = ok ? 'status-text success' : 'status-text';
+    };
+
+    function normalizar(texto) {
+      if (!texto) return "";
+      return texto.toString().normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+    }
+
+    function porcentaje(parte, total) {
+      if (isNaN(parte) || isNaN(total) || total === 0 || parte === null || total === null) return '0';
+      return ((parte / total) * 100).toFixed(2);
+    }
+
+    // ── Variables globales ──
+    let efectoresData       = null;
+    let capaEfectores       = null;
+    let allZonasFeatures    = [];
+    let allZonasDataLoaded  = false;
+    let datosZonasPoblacion = [];
+    const capas       = {};
+    const capasLabels = {};
+
+    const zonaInfoPanel        = document.getElementById('zona-info');
+    const allZonesSummaryPanel = document.getElementById('all-zones-summary-panel');
+    const allZonesList         = document.getElementById('all-zones-list');
+
+    let zonaCtrl = null;
+    let zonaSeleccionada = null; 
+
+    // ── Dropdown helper ──
+    function setupDropdown(wrapId, btnId, dropId, listId, allId, noneId, applyId, callback) {
+      const wrap   = document.getElementById(wrapId);
+      const btn    = document.getElementById(btnId);
+      const drop   = document.getElementById(dropId);
+      const list   = document.getElementById(listId);
+      const allB   = document.getElementById(allId);
+      const noneB  = document.getElementById(noneId);
+      const applyB = applyId ? document.getElementById(applyId) : null;
+
+      document.addEventListener('click', e => { if (!wrap.contains(e.target)) drop.classList.remove('open'); });
+      btn.addEventListener('click', () => drop.classList.toggle('open'));
+      if (allB)   allB.addEventListener('click',  () => list.querySelectorAll('input').forEach(c => c.checked = true));
+      if (noneB)  noneB.addEventListener('click', () => list.querySelectorAll('input').forEach(c => c.checked = false));
+      if (applyB) applyB.addEventListener('click', () => { drop.classList.remove('open'); if (callback) callback(); });
+
+      return {
+        getChecked: () => [...list.querySelectorAll('input:checked')].map(c => c.value),
+        setAll: (v) => list.querySelectorAll('input').forEach(c => c.checked = v),
+        setBtn: (t) => { btn.textContent = t; }
+      };
+    }
+
+    let seccionalesCtrl;
+    let map;
+
+    document.addEventListener("DOMContentLoaded", () => {
+
+      const REPO = 'https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/';
+
+      // ── Mapa ──
+      map = L.map('map').setView([-31.42, -64.18], 13);
+
+   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+  attribution: 'Tiles &copy; Esri',
+  maxZoom: 18
+}).addTo(map);
+
+      // ── Iconos ──
+      const iconoEfectores = L.icon({
+        iconUrl: REPO + 'EFECTORES.png',
+        iconSize: [36,36], iconAnchor: [18,36], popupAnchor: [0,-36]
+      });
+      const iconoHPA = L.icon({
+        iconUrl: REPO + 'HOSP-HPA-PLM.png',
+        iconSize: [38,38], iconAnchor: [19,38], popupAnchor: [0,-38]
+      });
+      const iconoCentroSalud = L.icon({
+        iconUrl: REPO + 'CS.png',
+        iconSize: [28,28], iconAnchor: [14,28], popupAnchor: [0,-28]
+      });
+
+      // ── Colores seccionales ──
+      const SECCIONAL_COLORS = [
+        "#9b59b6","#e91e63","#ff5722","#795548","#607d8b",
+        "#00bcd4","#cddc39","#ffc107","#ff9800","#673ab7",
+        "#3f51b5","#009688","#8bc34a","#e53935","#1e88e5",
+        "#00897b","#fb8c00","#6d4c41","#546e7a","#7cb342"
+      ];
+
+      function colorPorSeccional(id) {
+        const n = parseInt(id) || 0;
+        return SECCIONAL_COLORS[n % SECCIONAL_COLORS.length];
+      }
+
+      // ── Estilos ──
+      const estilos = (feature, layerName = "") => {
+        if (layerName === "SECCIONALES") {
+          const id = feature.properties?.seccional || "";
+          return { color: colorPorSeccional(id), weight: 2, opacity: 1, fillColor: colorPorSeccional(id), fillOpacity: 0.25 };
+        }
+        if (layerName === "CIRCUITO") {
+          const secc = feature.properties?.seccional || "";
+          return { color: colorPorSeccional(secc), weight: 1.5, opacity: 0.9, fillColor: colorPorSeccional(secc), fillOpacity: 0.12 };
+        }
+        return {
+          color:       feature.properties?.stroke              || '#3388ff',
+          weight:      feature.properties?.['stroke-width']    || 2,
+          opacity:     feature.properties?.['stroke-opacity']  || 1,
+          fillColor:   feature.properties?.fill                || '#3388ff',
+          fillOpacity: feature.properties?.['fill-opacity']    || 0.3
+        };
+      };
+
+      function getFeatureName(props, layerName) {
+        if (layerName === 'CIRCUITO'          && props.circuito)             return `${props.circuito}`;
+        if (layerName === 'SECCIONALES'       && props.seccional)            return `Seccional ${props.seccional}`;
+        if (layerName === 'ENTEMETROPOLITANO' && props.localidad)            return props.localidad;
+        if (layerName === 'DEPARTAMENTOS'     && props.nombre_departamento)  return props.nombre_departamento;
+        if (layerName === 'AP'                && props.id_area)              return props.id_area;
+        if (props.name)     return props.name;
+        if (props.NOM_ZONA) return props.NOM_ZONA;
+        if (props.CODIGO)   return props.CODIGO;
+        for (const key in props) {
+          if (typeof props[key] === 'string' && props[key].length > 1 && !/^\d+$/.test(props[key])) return props[key];
+        }
+        return 'Sin nombre';
+      }
+
+      function getCentroid(feature) {
+        try {
+          const bounds = L.geoJSON(feature).getBounds();
+          if (bounds && bounds.isValid()) return bounds.getCenter();
+        } catch(e) {}
+        return null;
+      }
+
+      function cargarCapa(url, layerName) {
+        setStatus(`Cargando ${layerName}...`);
+        fetch(url)
+          .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+          .then(data => {
+            removerCapa(layerName);
+
+            const capa = L.geoJSON(data, {
+              style: f => estilos(f, layerName),
+              onEachFeature: (feature, layer) => {
+                const name = getFeatureName(feature.properties, layerName);
+                layer.bindTooltip(name, { sticky: true, opacity: 0.85 });
+              }
+            }).addTo(map);
+
+            capas[layerName] = capa;
+
+            const labelsGroup = L.layerGroup().addTo(map);
+            data.features?.forEach(feature => {
+              const center = getCentroid(feature);
+              if (!center) return;
+              labelsGroup.addLayer(L.marker(center, {
+                icon: L.divIcon({ className: 'layer-label', html: getFeatureName(feature.properties, layerName), iconSize: null }),
+                interactive: false
+              }));
+            });
+            capasLabels[layerName] = labelsGroup;
+
+            setStatus(`${layerName} cargado ✓`, true);
+          })
+          .catch(() => setStatus(`Error cargando ${layerName}`));
+      }
+
+      function removerCapa(layerName) {
+        if (capas[layerName])       { map.removeLayer(capas[layerName]);       delete capas[layerName]; }
+        if (capasLabels[layerName]) { map.removeLayer(capasLabels[layerName]); delete capasLabels[layerName]; }
+      }
+
+      const NOMBRES_ESPECIALES = [
+        'medicina preventiva','dem','secretaría de salud','secretaria de salud',
+        'adicciones','salud mental','pec','direccion de calidad alimentaria',
+        'direccion de emergencias medicas 107','direccion de epidemiologia',
+        'laboratorio farmaceutico municipal','telesalud','pec los robles',
+        'dtc villa el libertador','pec comercial',
+        'secretaría de prev. y atenc. comunitaria','secretaria de prev. y atenc. comunitaria',
+        'centro comunitario maldonado','centro municipal de salud mental',
+        'direccion de salud mental','dirección de salud mental'
+      ];
+
+      function getIconoEfector(nombre, tipo) {
+        const n = nombre.toLowerCase();
+        const t = tipo.toLowerCase();
+        if (t.includes('hospital') || t.includes('hpa') || n.includes('padre la monaca')) return iconoHPA;
+        if (NOMBRES_ESPECIALES.some(k => n.includes(k))) return iconoEfectores;
+        return iconoCentroSalud;
+      }
+
+      function crearPopupCentroSalud(d) {
+        const nombreLimpio = (d.nombre || 'Centro de Salud').split('#')[0].trim();
+        const tipo   = (d.tipo   || '').toLowerCase();
+        const nombre = (d.nombre || '').toLowerCase();
+        const isEspecial = tipo.includes('hospital') || tipo.includes('hpa') ||
+                           nombre.includes('padre la monaca') ||
+                           NOMBRES_ESPECIALES.some(k => nombre.includes(k));
+
+        if (isEspecial) {
+          return `<div style="font-family:inherit;min-width:220px;">
+            <div style="font-weight:700;font-size:13px;color:#005288;text-align:center;margin-bottom:5px;">${nombreLimpio}</div>
+            <div style="font-size:12px;line-height:1.6;">
+              <div><b>Tipo:</b> ${d.tipo || 'S/D'}</div>
+              <div><b>Dirección:</b> ${d.direccion || 'S/D'}</div>
+            </div></div>`;
+        }
+
+        return `<div style="font-family:inherit;min-width:220px;">
+          <div style="font-weight:700;font-size:13px;color:#005288;text-align:center;margin-bottom:4px;">${nombreLimpio}</div>
+          <div style="font-size:22px;font-weight:700;text-align:center;color:#005288;margin-bottom:6px;">
+            ${(d.poblacion||0).toLocaleString('es-AR')}
+          </div>
+          <div style="font-size:12px;line-height:1.6;">
+            <div><b>Tipo:</b> ${d.tipo || 'S/D'}</div>
+            <div><b>Dirección:</b> ${d.direccion || 'S/D'}</div>
+            <div><b>Pob. Cobertura Pública Excl.:</b> ${(d.sin_cobertura||0).toLocaleString('es-AR')}
+              <span style="color:gray">(${d.porcentaje_sin_cobertura || '0%'})</span></div>
+            <div><b style="color:#E5B8D9;">Mujeres:</b> ${(d.mujeres||0).toLocaleString('es-AR')}
+              <span style="color:gray">(${porcentaje(d.mujeres,d.poblacion)}%)</span></div>
+            <div><b style="color:#3C5AB7;">Varones:</b> ${(d.hombres||0).toLocaleString('es-AR')}
+              <span style="color:gray">(${porcentaje(d.hombres,d.poblacion)}%)</span></div>
+            <div><b>Hogares:</b> ${(d.hogares||0).toLocaleString('es-AR')}</div>
+            <div><b>Hogares NBI:</b> ${(d.hogares_nbi||0).toLocaleString('es-AR')}
+              <span style="color:gray">(${porcentaje(d.hogares_nbi,d.hogares)}%)</span></div>
+          </div></div>`;
+      }
+
+      function renderizarEfectores(features) {
+        if (capaEfectores) map.removeLayer(capaEfectores);
+        const grupos = {};
+        features.forEach(f => {
+          const c = f.geometry?.coordinates;
+          if (!c) return;
+          const key = `${c[1]}_${c[0]}`;
+          if (!grupos[key]) grupos[key] = [];
+          grupos[key].push(f);
+        });
+
+        capaEfectores = L.layerGroup();
+        Object.values(grupos).forEach(group => {
+          const [lng, lat] = group[0].geometry.coordinates;
+          const p0 = group[0].properties;
+          const icono = getIconoEfector(p0.Centro || '', p0.Tipo || '');
+          const popupHtml = group.map(f => {
+            const p = f.properties;
+            return crearPopupCentroSalud({
+              nombre: p.Centro, tipo: p.Tipo, direccion: p.Direccion,
+              poblacion: p.PoblacionTotal ?? 0,
+              mujeres: p.Mujeres ?? 0, hombres: p.Varones ?? 0,
+              sin_cobertura: p.PoblacionSinCobertura ?? 0,
+              porcentaje_sin_cobertura: p.PorcentajeSinCobertura ?? 0,
+              hogares: p.Hogares ?? 0, hogares_nbi: p.HogaresNBI ?? 0
+            });
+          }).join('<hr style="margin:8px 0;">');
+          capaEfectores.addLayer(L.marker([lat, lng], { icon: icono }).bindPopup(popupHtml));
+        });
+        capaEfectores.addTo(map);
+      }
+
+      function mostrarTodosEfectores()       { renderizarEfectores(efectoresData || []); }
+      function filtrarEfectoresPorZona(zona) {
+        const match = (zona.properties?.name || '').match(/\d+/);
+        if (!match) { mostrarTodosEfectores(); return; }
+        const zonaNum = parseInt(match[0]);
+        renderizarEfectores((efectoresData || []).filter(f => parseInt(f.properties?.Zona) === zonaNum));
+      }
+
+      function poblarSelectorZonas(features) {
+        const nombres = [...new Set(features.map(f => f.properties?.name).filter(Boolean))].sort();
+        const ZONA_COLORS = {
+          'ZONA 1': '#097138', 'ZONA 2': '#fada80', 'ZONA 3': '#ce93d8',
+          'ZONA 4': '#795548', 'ZONA 5': '#f48fb1', 'ZONA 6': '#000000'
+        };
+        const lista = document.getElementById('zonaList');
+
+        lista.innerHTML = nombres.map(n => {
+          const color = ZONA_COLORS[n] || '#005288';
+          return `<label class="ms-item">
+            <input type="checkbox" value="${n}">
+            <span style="display:inline-block;width:11px;height:11px;background:${color};border-radius:2px;flex-shrink:0;"></span>
+            <span>${n}</span>
+          </label>`;
+        }).join('');
+
+        // Botón "Todas"
+        document.getElementById('zonaAll').addEventListener('click', () => {
+          lista.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = true);
+        });
+        // Botón "Ninguna"
+        document.getElementById('zonaNone').addEventListener('click', () => {
+          lista.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
+        });
+        // Botón "Aplicar"
+        document.getElementById('zonaApply').addEventListener('click', () => {
+          document.getElementById('zonaDrop').classList.remove('open');
+          const seleccionadas = [...lista.querySelectorAll('input:checked')].map(c => c.value);
+          aplicarZonas(seleccionadas);
+        });
+
+        zonaCtrl = setupDropdown('zonaWrap','zonaBtn','zonaDrop','zonaList', null, null, null, null);
+      }
+
+      function aplicarZonas(zonasSeleccionadas) {
+        const zonaBtn = document.getElementById('zonaBtn');
+        removerCapa('ZONA');
+        zonaInfoPanel.style.display        = 'none';
+        allZonesSummaryPanel.style.display = 'none';
+
+        if (!zonasSeleccionadas || zonasSeleccionadas.length === 0) {
+          zonaBtn.textContent = '-- Seleccionar Zona --';
+          mostrarTodosEfectores();
+          map.setView([-31.42, -64.18], 11);
+          return;
+        }
+
+        // Etiqueta del botón
+        if (zonasSeleccionadas.length === 1) {
+          zonaBtn.textContent = zonasSeleccionadas[0];
+        } else {
+          zonaBtn.textContent = `${zonasSeleccionadas.length} zonas seleccionadas`;
+        }
+
+        // Filtrar features de las zonas seleccionadas
+        const feats = allZonasFeatures.filter(f => zonasSeleccionadas.includes(f.properties?.name));
+        if (!feats.length) return;
+
+        const fc = { type: 'FeatureCollection', features: feats };
+        const capa = L.geoJSON(fc, {
+          style: f => estilos(f, 'ZONA'),
+          onEachFeature: (f, layer) => {
+            const zonaNombre = f.properties?.name || '';
+            const zona = datosZonasPoblacion.find(z => normalizar(`ZONA ${z.Zona}`) === normalizar(zonaNombre));
+            let tooltipContent = `<b>${zonaNombre}</b>`;
+            if (zona) {
+              tooltipContent += `<br>Población: <b>${(zona.PoblacionTotal||0).toLocaleString('es-AR')}</b>`
+                + `<br>Mujeres: ${(zona.Mujeres||0).toLocaleString('es-AR')} · Varones: ${(zona.Varones||0).toLocaleString('es-AR')}`
+                + `<br>Hogares: ${(zona.Hogares||0).toLocaleString('es-AR')} · NBI: ${(zona.HogaresNBI||0).toLocaleString('es-AR')}`
+                + `<br>Sin cobertura: ${(zona.PoblacionSinCobertura||0).toLocaleString('es-AR')}`;
+            }
+            layer.bindTooltip(tooltipContent, { sticky: true, opacity: 0.95 });
+            layer.on('click', () => mostrarInfoZona(zonaNombre));
+          }
+        }).addTo(map);
+        capas['ZONA'] = capa;
+        map.fitBounds(capa.getBounds(), { padding:[30,30] });
+
+        // Labels
+        const labelsGroup = L.layerGroup().addTo(map);
+        feats.forEach(f => {
+          const center = getCentroid(f);
+          if (!center) return;
+          labelsGroup.addLayer(L.marker(center, {
+            icon: L.divIcon({ className:'layer-label', html: f.properties.name, iconSize: null }),
+            interactive: false
+          }));
+        });
+        capasLabels['ZONA'] = labelsGroup;
+
+        // Efectores de las zonas seleccionadas
+        const nums = zonasSeleccionadas.map(n => { const m = n.match(/\d+/); return m ? parseInt(m[0]) : -1; });
+        renderizarEfectores((efectoresData || []).filter(f => nums.includes(parseInt(f.properties?.Zona))));
+
+        // Panel info: si es 1 zona → detalle, si son varias → resumen de esas zonas
+        if (zonasSeleccionadas.length === 1) {
+          mostrarInfoZona(zonasSeleccionadas[0]);
+        } else {
+          mostrarResumenZonasSeleccionadas(zonasSeleccionadas);
+        }
+      }
+
+      function mostrarResumenZonasSeleccionadas(zonasSeleccionadas) {
+        const datos = datosZonasPoblacion.filter(z => zonasSeleccionadas.includes(`ZONA ${z.Zona}`));
+        const totalPob = datos.reduce((a, z) => a + (z.PoblacionTotal || 0), 0);
+        allZonesSummaryPanel.querySelector('h3').innerHTML =
+          `Zonas seleccionadas<br><span style="font-size:12px;font-weight:400;color:#555;">Total: ${totalPob.toLocaleString('es-AR')}</span>`;
+        allZonesList.innerHTML = '';
+        datos.sort((a,b) => parseInt(a.Zona)-parseInt(b.Zona)).forEach(z => {
+          const li = document.createElement('li');
+          li.innerHTML = `<span class="zone-name">ZONA ${z.Zona}:</span><span class="zone-population">${(z.PoblacionTotal||0).toLocaleString('es-AR')}</span>`;
+          allZonesList.appendChild(li);
+        });
+        zonaInfoPanel.style.display = 'none';
+        allZonesSummaryPanel.style.display = 'flex';
+      }
+
+      function mostrarInfoZona(zonaNombre) {
+        const zona = datosZonasPoblacion.find(z => normalizar(`ZONA ${z.Zona}`) === normalizar(zonaNombre));
+        if (!zona) return;
+        document.getElementById('zona-titulo').textContent = zonaNombre;
+        document.getElementById('zona-datos').innerHTML = `
+          <table style="width:100%;font-size:13px;border-collapse:collapse;">
+            <tr style="border-bottom:1px solid #eee;">
+              <td style="padding:5px 2px;color:#555;">Población Total</td>
+              <td style="padding:5px 2px;font-weight:700;text-align:right;color:#005288;">${(zona.PoblacionTotal||0).toLocaleString('es-AR')}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+              <td style="padding:5px 2px;color:#c06fa0;font-weight:600;">Mujeres</td>
+              <td style="padding:5px 2px;font-weight:700;text-align:right;">${(zona.Mujeres||0).toLocaleString('es-AR')}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+              <td style="padding:5px 2px;color:#3C5AB7;font-weight:600;">Varones</td>
+              <td style="padding:5px 2px;font-weight:700;text-align:right;">${(zona.Varones||0).toLocaleString('es-AR')}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+              <td style="padding:5px 2px;color:#555;">Hogares</td>
+              <td style="padding:5px 2px;font-weight:700;text-align:right;">${(zona.Hogares||0).toLocaleString('es-AR')}</td>
+            </tr>
+            <tr style="border-bottom:1px solid #eee;">
+              <td style="padding:5px 2px;color:#555;">Hogares NBI</td>
+              <td style="padding:5px 2px;font-weight:700;text-align:right;">${(zona.HogaresNBI||0).toLocaleString('es-AR')}</td>
+            </tr>
+            <tr>
+              <td style="padding:5px 2px;color:#555;">Pob. Sin Cobertura</td>
+              <td style="padding:5px 2px;font-weight:700;text-align:right;">${(zona.PoblacionSinCobertura||0).toLocaleString('es-AR')}</td>
+            </tr>
+          </table>`;
+        allZonesSummaryPanel.style.display = 'none';
+        zonaInfoPanel.style.display = 'flex';
+      }
+
+      function mostrarResumenTodasZonas() {
+        const zonasSin7    = datosZonasPoblacion.filter(z => String(z.Zona) !== '7');
+        const totalCapital = datosZonasPoblacion.reduce((acc, z) => acc + (z.PoblacionTotal || 0), 0);
+        allZonesSummaryPanel.querySelector('h3').innerHTML = `Población por Zona<br><span style="font-size:12px;font-weight:400;color:#555;">Total Capital: ${totalCapital.toLocaleString('es-AR')}</span>`;
+        allZonesList.innerHTML = '';
+        [...zonasSin7].sort((a,b) => parseInt(a.Zona)-parseInt(b.Zona)).forEach(z => {
+          const li = document.createElement('li');
+          li.innerHTML = `<span class="zone-name">ZONA ${z.Zona}:</span><span class="zone-population">${(z.PoblacionTotal||0).toLocaleString('es-AR')}</span>`;
+          allZonesList.appendChild(li);
+        });
+        zonaInfoPanel.style.display = 'none';
+        allZonesSummaryPanel.style.display = 'flex';
+      }
+
+      function mostrarTodasLasZonas() {
+        const fc = { type:'FeatureCollection', features: allZonasFeatures };
+        const capa = L.geoJSON(fc, {
+          style: f => estilos(f, 'ZONA'),
+          onEachFeature: (f, layer) => {
+            const zonaNombre = f.properties?.name || '';
+            const zona = datosZonasPoblacion.find(z => normalizar(`ZONA ${z.Zona}`) === normalizar(zonaNombre));
+            let tooltipContent = `<b>${zonaNombre}</b>`;
+            if (zona) {
+              tooltipContent += `<br>Población: <b>${(zona.PoblacionTotal||0).toLocaleString('es-AR')}</b>`
+                + `<br>Mujeres: ${(zona.Mujeres||0).toLocaleString('es-AR')} · Varones: ${(zona.Varones||0).toLocaleString('es-AR')}`
+                + `<br>Hogares: ${(zona.Hogares||0).toLocaleString('es-AR')} · NBI: ${(zona.HogaresNBI||0).toLocaleString('es-AR')}`
+                + `<br>Sin cobertura: ${(zona.PoblacionSinCobertura||0).toLocaleString('es-AR')}`;
+            }
+            layer.bindTooltip(tooltipContent, { sticky: true, opacity: 0.95 });
+            layer.on('click', () => mostrarInfoZona(zonaNombre));
+          }
+        }).addTo(map);
+        capas['ZONA'] = capa;
+        const labelsGroup = L.layerGroup().addTo(map);
+        allZonasFeatures.forEach(f => {
+          const center = getCentroid(f);
+          if (!center) return;
+          labelsGroup.addLayer(L.marker(center, {
+            icon: L.divIcon({ className:'layer-label', html: f.properties.name, iconSize: null }), interactive: false
+          }));
+        });
+        capasLabels['ZONA'] = labelsGroup;
+        mostrarTodosEfectores();
+        map.fitBounds(capa.getBounds(), { padding:[20,20] });
+      }
+
+      function aplicarSeccionales() {
+        removerCapa('SECCIONALES');
+        if (!seccionalesCtrl) return;
+        const sel = seccionalesCtrl.getChecked();
+        seccionalesCtrl.setBtn(sel.length === 0 ? 'Ninguna' : `${sel.length} seleccionada${sel.length > 1 ? 's' : ''}`);
+        if (sel.length === 0) return;
+        fetch(REPO + 'CIRCUITO_SECCIONALES.json').then(r => r.json()).then(data => {
+          const filtradas = { type:'FeatureCollection', features: data.features.filter(f => sel.includes(String(f.properties?.seccional))) };
+          const capa = L.geoJSON(filtradas, {
+            style: f => estilos(f, 'SECCIONALES'),
+            onEachFeature: (f, layer) => layer.bindTooltip(`Seccional ${f.properties?.seccional}`, { sticky: true })
+          }).addTo(map);
+          capas['SECCIONALES'] = capa;
+          const labelsGroup = L.layerGroup().addTo(map);
+          filtradas.features.forEach(f => {
+            const center = getCentroid(f);
+            if (!center) return;
+            labelsGroup.addLayer(L.marker(center, {
+              icon: L.divIcon({ className:'layer-label', html:`Seccional ${f.properties.seccional}`, iconSize: null }), interactive: false
+            }));
+          });
+          capasLabels['SECCIONALES'] = labelsGroup;
+          map.fitBounds(capa.getBounds(), { padding:[20,20] });
+        });
+      }
+
+      document.getElementById('search-efector').addEventListener('input', e => {
+        let texto = e.target.value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bcs[\s#°º\-]*/g, 'centro de salud ').replace(/n[°º]?\s*/g, '').replace(/\s+/g, ' ');
+        if (!texto) { mostrarTodosEfectores(); return; }
+        const filtrados = (efectoresData || []).filter(f => {
+          const nombre = (f.properties?.Centro || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bcs[\s#°º\-]*/g, 'centro de salud ').replace(/n[°º]?\s*/g, '').replace(/\s+/g, ' ');
+          return nombre.includes(texto);
+        });
+        renderizarEfectores(filtrados);
+      });
+
+      document.getElementById('chkCIRCUITO').addEventListener('change', function() { this.checked ? cargarCapa(REPO + 'CIRCUITO_SECCIONALES.json', 'CIRCUITO') : removerCapa('CIRCUITO'); });
+      document.getElementById('chkAP').addEventListener('change', function() { this.checked ? cargarCapa(REPO + 'AP.json', 'AP') : removerCapa('AP'); });
+      document.getElementById('chkENTEMETROPOLITANO').addEventListener('change', function() { this.checked ? cargarCapa(REPO + 'ENTEMETROPOLITANO.json', 'ENTEMETROPOLITANO') : removerCapa('ENTEMETROPOLITANO'); });
+      document.getElementById('chkDEPARTAMENTOS').addEventListener('change', function() { this.checked ? cargarCapa(REPO + 'DEPARTAMENTOS.json', 'DEPARTAMENTOS') : removerCapa('DEPARTAMENTOS'); });
+      document.getElementById('chkLOCALIDADES').addEventListener('change', function() { this.checked ? cargarCapa(REPO + 'LOCALIDADES.json', 'LOCALIDADES') : removerCapa('LOCALIDADES'); });
+
+      document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+        aplicarZonas([]);
+        ['ZONA','SECCIONALES','CIRCUITO','AP','ENTEMETROPOLITANO','DEPARTAMENTOS','LOCALIDADES'].forEach(removerCapa);
+        ['chkCIRCUITO','chkAP','chkENTEMETROPOLITANO','chkDEPARTAMENTOS','chkLOCALIDADES'].forEach(id => { document.getElementById(id).checked = false; });
+        if (seccionalesCtrl) { seccionalesCtrl.setAll(false); seccionalesCtrl.setBtn('Ninguna'); }
+        document.querySelectorAll('#zonaList input[type="checkbox"]').forEach(c => c.checked = false);
+        zonaInfoPanel.style.display        = 'none';
+        allZonesSummaryPanel.style.display = 'none';
+        mostrarTodosEfectores();
+        map.setView([-31.42, -64.18], 11);
+        setStatus('Filtros limpiados', true);
+      });
+
+      Promise.all([
+        fetch(REPO + 'efectores.geojson').then(r => r.json()),
+        fetch(REPO + 'zonas.geojson').then(r => r.json()),
+        fetch(REPO + 'zonas_valores.json').then(r => r.json())
+      ])
+      .then(([efectores, zonasGeo, zonasValores]) => {
+        efectoresData          = efectores.features;
+        allZonasFeatures       = zonasGeo.features;
+        datosZonasPoblacion    = zonasValores;
+        allZonasDataLoaded     = true;
+
+        if (allZonasFeatures.length > 0) {
+          // Solo invalidamos el tamaño del mapa para evitar cuadros grises
+          // El zoom inicial sobre Córdoba ya está seteado correctamente
+          setTimeout(() => {
+              map.invalidateSize();
+          }, 300);
+      }
+
+        const totalPob = zonasValores.reduce((acc, z) => acc + (z.PoblacionTotal || 0), 0);
+        document.getElementById('statPoblacion').textContent = totalPob.toLocaleString('es-AR');
+        poblarSelectorZonas(allZonasFeatures);
+        mostrarTodosEfectores();
+        fetch(REPO + 'CIRCUITO_SECCIONALES.json').then(r => r.json()).then(data => {
+          const seccionales = [...new Set(data.features.map(f => f.properties?.seccional).filter(Boolean).map(String))].sort((a,b) => parseInt(a) - parseInt(b));
+          document.getElementById('seccionalesList').innerHTML = seccionales.map(s => `<label class="ms-item"><input type="checkbox" value="${s}"><span style="display:inline-block;width:11px;height:11px;background:${colorPorSeccional(s)};border-radius:2px;flex-shrink:0;"></span><span>Seccional ${s}</span></label>`).join('');
+          seccionalesCtrl = setupDropdown('seccionalesWrap','seccionalesBtn','seccionalesDrop','seccionalesList','seccionalesAll','seccionalesNone','seccionalesApply', aplicarSeccionales);
+        });
+        setStatus('✓ Datos cargados correctamente', true);
+      })
+      .catch(e => { console.error(e); setStatus('❌ Error cargando datos'); });
+    });
+
+  </script>
+</body>
+</html>
