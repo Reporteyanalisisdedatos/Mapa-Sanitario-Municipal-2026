@@ -640,12 +640,10 @@
       const REPO = 'https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/';
 
       // ── Mapa ──
-      const map = L.map('map').setView([-31.42, -64.18], 11);
+      const map = L.map('map').setView([-31.42, -64.18], 13);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 20
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
 }).addTo(map);
 
       // ── Iconos ──
@@ -1091,6 +1089,17 @@
         allZonasFeatures       = zonasGeo.features;
         datosZonasPoblacion    = zonasValores;
         allZonasDataLoaded     = true;
+
+        if (allZonasFeatures.length > 0) {
+          const tempLayer = L.geoJSON({ type: 'FeatureCollection', features: allZonasFeatures });
+          
+          // Usamos un pequeño delay para que el contenedor del mapa esté listo
+          setTimeout(() => {
+              map.fitBounds(tempLayer.getBounds(), { padding: [30, 30] });
+              map.invalidateSize(); // Esto arregla los cuadros grises
+          }, 500);
+      }
+
         const totalPob = zonasValores.reduce((acc, z) => acc + (z.PoblacionTotal || 0), 0);
         document.getElementById('statPoblacion').textContent = totalPob.toLocaleString('es-AR');
         poblarSelectorZonas(allZonasFeatures);
@@ -1104,6 +1113,11 @@
       })
       .catch(e => { console.error(e); setStatus('❌ Error cargando datos'); });
     });
+    window.addEventListener('load', () => {
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 1000);
+});
   </script>
 </body>
 </html>
