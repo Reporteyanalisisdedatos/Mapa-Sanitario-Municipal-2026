@@ -512,8 +512,8 @@
 
     <div class="sidebar-header">
       <div class="logo-row">
-        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/SecreB.png" alt="Secretaría de Salud" />
-        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/HorizontalCTWhite.png" alt="Coordinación Tecnológica" />
+        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/SecreB.png" alt="Secretaría de Salud" />
+        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/HorizontalCTWhite.png" alt="Coordinación Tecnológica" />
       </div>
     </div>
 
@@ -541,13 +541,13 @@
     <div class="legend-icons">
       <div class="legend-icons-title">Referencias</div>
       <div class="legend-icon-row">
-        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/CS.png"> Centros de Salud
+        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/CS.png"> Centros de Salud
       </div>
       <div class="legend-icon-row">
-        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/HOSP-HPA-PLM.png"> Hospitales / HPA / P. La Monaca
+        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/HOSP-HPA-PLM.png"> Hospitales / HPA / P. La Monaca
       </div>
       <div class="legend-icon-row">
-        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/EFECTORES.png"> Efectores Municipales
+        <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/EFECTORES.png"> Efectores Municipales
       </div>
     </div>
 
@@ -607,6 +607,7 @@
     </div>
   </div>
 </div>
+  </div>
 
   <div class="category-group provincial">
     <div class="category-header">🌎 NIVEL PROVINCIA</div>
@@ -617,7 +618,7 @@
   </div>
 
   <button class="clear-filters-btn" id="clearFiltersBtn">🧹 Limpiar Todos los Filtros</button>
-  </div>
+</div>
 
     <div class="status-container">
       <div class="status-text" id="status">Cargando datos...</div>
@@ -690,7 +691,7 @@
 
     document.addEventListener("DOMContentLoaded", () => {
 
-      const REPO = 'https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/';
+      const REPO = 'https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipalidad-de-Cordoba/';
 
       // ── Mapa ──
       map = L.map('map').setView([-31.42, -64.18], 13);
@@ -1158,25 +1159,12 @@
         });
       }
       
-      function normalizarBusqueda(texto) {
-        return texto
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')  // quitar tildes
-          .replace(/\bcs\s*[#°º]?\s*/g, 'centro de salud ')  // CS → centro de salud (solo al inicio de palabra)
-          .replace(/n[°º]\s*/g, '')          // nº → vacío (número ordinal)
-          .replace(/\s+/g, ' ')
-          .trim();
-      }
-
       document.getElementById('search-efector').addEventListener('input', e => {
-        const texto = normalizarBusqueda(e.target.value);
+        let texto = e.target.value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bcs[\s#°º\-]*/g, 'centro de salud ').replace(/n[°º]?\s*/g, '').replace(/\s+/g, ' ');
         if (!texto) { mostrarTodosEfectores(); return; }
         const filtrados = (efectoresData || []).filter(f => {
-          const nombre = normalizarBusqueda(f.properties?.Centro || '');
-          const tipo   = normalizarBusqueda(f.properties?.Tipo || '');
-          const dir    = normalizarBusqueda(f.properties?.Direccion || '');
-          return nombre.includes(texto) || tipo.includes(texto) || dir.includes(texto);
+          const nombre = (f.properties?.Centro || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\bcs[\s#°º\-]*/g, 'centro de salud ').replace(/n[°º]?\s*/g, '').replace(/\s+/g, ' ');
+          return nombre.includes(texto);
         });
         renderizarEfectores(filtrados);
       });
