@@ -745,30 +745,81 @@
 
         document.addEventListener("DOMContentLoaded", () => {
 
-            const map = L.map('map').setView([-31.42, -64.18], 11);
-
-            const iconoEfectores = L.icon({
-                iconUrl:'./assets/EFECTORES.png',
-                iconSize: [36, 36], iconAnchor: [18, 36], popupAnchor: [0, -36],
+            const map = L.map('map', {
+                center: [-31.42, -64.18],
+                zoom: 11,
+                zoomSnap: 0.5,
+                wheelPxPerZoomLevel: 80   // zoom con scroll más suave
             });
 
-            const iconoHPA = L.icon({
-                iconUrl: './assets/HOSP-HPA-PLM.png',
-                iconSize: [38, 38], iconAnchor: [19, 38], popupAnchor: [0, -38],
-            });
+            // ── Zoom dinámico de íconos ──────────────────────────
+            function calcIconSize(base, zoom) {
+                // escala los íconos entre zoom 10 y 16
+                const factor = Math.max(0.5, Math.min(2, (zoom - 10) * 0.2 + 0.8));
+                return Math.round(base * factor);
+            }
 
-            const iconoCentroSalud = L.icon({
-                iconUrl: './assets/CS.png',
-                iconSize: [28, 28], iconAnchor: [14, 28], popupAnchor: [0, -28],
-            });
+            function crearIconos(zoom) {
+                const sz = {
+                    cs:   calcIconSize(28, zoom),
+                    hpa:  calcIconSize(38, zoom),
+                    ef:   calcIconSize(36, zoom),
+                    ep:   calcIconSize(30, zoom),
+                };
+                return {
+                    centroSalud: L.icon({ iconUrl:'./assets/CS.png',
+                        iconSize:[sz.cs,sz.cs], iconAnchor:[sz.cs/2,sz.cs], popupAnchor:[0,-sz.cs] }),
+                    hpa: L.icon({ iconUrl:'./assets/HOSP-HPA-PLM.png',
+                        iconSize:[sz.hpa,sz.hpa], iconAnchor:[sz.hpa/2,sz.hpa], popupAnchor:[0,-sz.hpa] }),
+                    efectores: L.icon({ iconUrl:'./assets/EFECTORES.png',
+                        iconSize:[sz.ef,sz.ef], iconAnchor:[sz.ef/2,sz.ef], popupAnchor:[0,-sz.ef] }),
+                    establecimiento: L.icon({ iconUrl:'./assets/establecimientos_publicos.png',
+                        iconSize:[sz.ep,sz.ep], iconAnchor:[sz.ep/2,sz.ep], popupAnchor:[0,-sz.ep] }),
+                };
+            }
 
-            const iconoEstablecimiento = L.icon({
-                iconUrl: './assets/establecimientos_publicos.png',
-                iconSize: [30, 30], iconAnchor: [15, 30], popupAnchor: [0, -30],
+            let iconos = crearIconos(11);
+            let iconoEfectores      = iconos.efectores;
+            let iconoHPA            = iconos.hpa;
+            let iconoCentroSalud    = iconos.centroSalud;
+            let iconoEstablecimiento = iconos.establecimiento;
+
+            // Redibujar íconos al cambiar zoom
+            map.on('zoomend', () => {
+                const z = map.getZoom();
+                iconos            = crearIconos(z);
+                iconoEfectores    = iconos.efectores;
+                iconoHPA          = iconos.hpa;
+                iconoCentroSalud  = iconos.centroSalud;
+                iconoEstablecimiento = iconos.establecimiento;
+
+                // Actualizar íconos en capa activa sin recargar datos
+                if (capaEfectores) {
+                    capaEfectores.eachLayer(layer => {
+                        if (!layer.setIcon) return;
+                        const props = layer._datosPrincipales;
+                        if (!props) return;
+                        const nombre = (props.Centro || '').toLowerCase();
+                        const tipo   = (props.Tipo   || '').toLowerCase();
+                        if (tipo.includes('hospital') || tipo.includes('hpa') || nombre.includes('padre la monaca'))
+                            layer.setIcon(iconoHPA);
+                        else if (esNombreEspecial(nombre, tipo))
+                            layer.setIcon(iconoEfectores);
+                        else
+                            layer.setIcon(iconoCentroSalud);
+                    });
+                }
+                if (capaEstablecimientos) {
+                    capaEstablecimientos.eachLayer(layer => {
+                        if (layer.setIcon) layer.setIcon(iconoEstablecimiento);
+                    });
+                }
             });
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
+                keepBuffer: 4,          // mantiene tiles vecinos en memoria
+                updateWhenIdle: true,   // no actualiza mientras se arrastra
                 attribution: '&copy; OpenStreetMap contributors',
             }).addTo(map);
 
@@ -885,7 +936,7 @@
                                 let icono = iconoCentroSalud;
                                 if (tipo.includes('hospital') || tipo.includes('hpa') || nombre.includes('padre la monaca')) {
                                     icono = iconoHPA;
-                                } else if (esNombreEspecial(nombre)) {
+                                } else if (esNombreEspecial(nombre, tipo)) {
                                     icono = iconoEfectores;
                                 }
                                 return L.marker(latlng, { icon: icono });
@@ -1157,7 +1208,8 @@
                 'centro municipal de salud mental - tramas','direccion de salud mental',
                 'dirección de salud mental'
             ];
-            function esNombreEspecial(nombre) {
+            function esNombreEspecial(nombre, tipo) {
+                if (tipo && (tipo.includes('servicio odontol') || tipo.includes('odontol'))) return true;
                 return nombresEspecialesList.some(k => nombre.includes(k));
             }
 
@@ -1296,8 +1348,10 @@
                         const tipo = (props.Tipo || '').toLowerCase();
                         let icono = iconoCentroSalud;
                         if (tipo.includes('hospital') || tipo.includes('hpa') || nombre.includes('padre la monaca')) icono = iconoHPA;
-                        else if (esNombreEspecial(nombre)) icono = iconoEfectores;
-                        return L.marker(latlng, { icon: icono });
+                        else if (esNombreEspecial(nombre, tipo)) icono = iconoEfectores;
+                        const m = L.marker(latlng, { icon: icono });
+                        m._datosPrincipales = props; // ref para zoom dinámico
+                        return m;
                     },
                     onEachFeature: (feature, layer) => {
                         const popups = feature.properties.grupoEfectores.map(props => crearPopupCentroSalud({
@@ -1361,7 +1415,7 @@
                     const tipo = (props.Tipo || '').toLowerCase();
                     let icono = iconoCentroSalud;
                     if (tipo.includes('hospital') || tipo.includes('hpa') || nombre.includes('padre la monaca')) icono = iconoHPA;
-                    else if (esNombreEspecial(nombre)) icono = iconoEfectores;
+                    else if (esNombreEspecial(nombre, tipo)) icono = iconoEfectores;
 
                     const popupHtml = features.map(f => {
                         const p = f.properties;
@@ -1374,7 +1428,10 @@
                         });
                     }).join('<hr style="margin:8px 0;">');
 
-                    capaEfectores.addLayer(L.marker([lat,lng],{icon:icono}).bindPopup(popupHtml));
+                    const mk = L.marker([lat,lng],{icon:icono});
+                    mk._datosPrincipales = features[0].properties;
+                    mk.bindPopup(popupHtml);
+                    capaEfectores.addLayer(mk);
                 });
 
                 capaEfectores.addTo(map);
