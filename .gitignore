@@ -1,0 +1,14 @@
+# Claude Code internal files
+.claude/
+
+# VS Code
+.vscode/
+
+# System files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Backup files
+*.bak
+*.tmp
