@@ -408,6 +408,18 @@
             box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
         }
 
+        .tooltip-efector {
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            padding: 5px 10px !important;
+            border: 1px solid #005288 !important;
+            border-radius: 6px !important;
+            background-color: rgba(255,255,255,0.95) !important;
+            color: #005288 !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+            white-space: nowrap !important;
+        }
+
         /* ========== PANEL INFO EFECTOR (dentro de sidebar) ========== */
         #panel-centro {
             position: absolute;
@@ -1043,6 +1055,8 @@
                                 return m;
                             },
                             onEachFeature: (feature, layer) => {
+                                const nombreTooltip = (feature.properties.grupoEfectores[0].Centro || 'S/D');
+                                layer.bindTooltip(nombreTooltip, { direction: 'top', sticky: false, className: 'tooltip-efector' });
                                 layer.on('click', () => {
                                     zoomAlCentro(layer.getLatLng());
                                     mostrarPanelCentro(feature.properties.grupoEfectores);
@@ -1457,6 +1471,8 @@
                         return m;
                     },
                     onEachFeature: (feature, layer) => {
+                        const nombreTooltip = (feature.properties.grupoEfectores[0].Centro || 'S/D');
+                        layer.bindTooltip(nombreTooltip, { direction: 'top', sticky: false, className: 'tooltip-efector' });
                         layer.on('click', () => {
                             zoomAlCentro(layer.getLatLng());
                             mostrarPanelCentro(feature.properties.grupoEfectores);
@@ -1520,6 +1536,7 @@
 
                     const mk = L.marker([lat,lng],{icon:icono});
                     mk._datosPrincipales = features[0].properties;
+                    mk.bindTooltip(props.Centro || 'S/D', { direction: 'top', sticky: false, className: 'tooltip-efector' });
                     mk.on('click', () => {
                         zoomAlCentro(mk.getLatLng());
                         mostrarPanelCentro(features.map(f => f.properties));
