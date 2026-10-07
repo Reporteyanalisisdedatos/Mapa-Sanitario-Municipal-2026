@@ -1311,9 +1311,7 @@
                             }
                         ).addTo(map);
                         mostrarTodosEfectores();
-                        // mostrarResumenTodasZonas(); // Desactivado temporalmente
-                        allZonesSummaryPanel.style.display = 'none';
-                        zonaInfoPanel.style.display = 'none';
+                        mostrarResumenTodasZonas();
                         const allBounds = L.geoJSON({ type: 'FeatureCollection', features: allZonasFeatures }).getBounds();
                         if (allBounds.isValid()) map.fitBounds(allBounds, { padding: [40, 40] });
 
