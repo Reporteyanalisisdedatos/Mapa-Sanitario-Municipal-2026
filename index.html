@@ -276,6 +276,41 @@
             font-family: 'Inter', sans-serif;
         }
 
+        /* ========== IVS (Índice de Vulnerabilidad Social) ========== */
+        .ivs-swatch {
+            width: 16px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+            border: 1px solid rgba(0,0,0,0.15);
+        }
+        .ivs-leyenda {
+            background: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            color: #333;
+            min-width: 170px;
+        }
+        .ivs-leyenda-titulo {
+            font-weight: 700;
+            font-size: 12px;
+            color: #005288;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 6px;
+            margin-bottom: 6px;
+        }
+        .ivs-leyenda-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 3px 0;
+        }
+
         /* ========== PANEL INFO ZONA (derecha del mapa) ========== */
         #zona-info {
             display: none;
@@ -639,8 +674,8 @@
         <!-- Header con logos -->
         <div class="sidebar-header">
             <div class="logo-container">
-                <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/assets/SecreB.png" alt="Secretaría de Salud" style="height:38px;" />
-                <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/assets/HorizontalCTWhite.png" alt="Coordinación Tecnológica" style="height:52px;" />
+                <img src="assets/SecreB.png" alt="Secretaría de Salud" style="height:38px;" />
+                <img src="assets/HorizontalCTWhite.png" alt="Coordinación Tecnológica" style="height:52px;" />
             </div>
             <div class="header-divider" aria-hidden="true"></div>
             <div class="page-title">Mapa Sanitario - Municipalidad de Córdoba</div>
@@ -661,19 +696,19 @@
             <div class="leyenda-title">Referencias</div>
             <div class="leyenda-items">
                 <div class="leyenda-item">
-                    <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/assets/CS.png" alt="CS" />
+                    <img src="assets/CS.png" alt="CS" />
                     Centros de Salud
                 </div>
                 <div class="leyenda-item">
-                    <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/assets/HOSP-HPA-PLM.png" alt="HPA" />
+                    <img src="assets/HOSP-HPA-PLM.png" alt="HPA" />
                     Hospitales, HPA, Padre La Monaca
                 </div>
                 <div class="leyenda-item">
-                    <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/assets/EFECTORES.png" alt="Efectores" />
+                    <img src="assets/EFECTORES.png" alt="Efectores" />
                     Efectores Municipales
                 </div>
                 <div class="leyenda-item">
-                    <img src="https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/assets/establecimientos_publicos.png" alt="Establecimientos" />
+                    <img src="assets/establecimientos_publicos.png" alt="Establecimientos" />
                     Establecimientos Públicos
                 </div>
             </div>
@@ -751,6 +786,25 @@
                             <button type="button" id="epApply" class="apply-btn">Aplicar</button>
                         </div>
                         <div class="ms-list" id="epList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Índice de Vulnerabilidad Social -->
+            <div class="filter-section">
+                <div class="filter-header">
+                    <span class="filter-icon">📊</span>
+                    INDICE DE VULNERABILIDAD SOCIAL (IVS)
+                </div>
+                <div class="ms-wrap" id="ivsWrap">
+                    <button class="ms-btn" id="ivsBtn">Seleccionar nivel...</button>
+                    <div class="ms-drop" id="ivsDrop">
+                        <div class="ms-actions">
+                            <button type="button" id="ivsAll">Todos</button>
+                            <button type="button" id="ivsNone">Ninguno</button>
+                            <button type="button" id="ivsApply" class="apply-btn">Aplicar</button>
+                        </div>
+                        <div class="ms-list" id="ivsList"></div>
                     </div>
                 </div>
             </div>
@@ -920,16 +974,28 @@
                 }
             });
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 keepBuffer: 4,          // mantiene tiles vecinos en memoria
                 updateWhenIdle: true,   // no actualiza mientras se arrastra
-                attribution: '&copy; OpenStreetMap contributors',
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
             }).addTo(map);
 
             /* ============================
                ESTILOS POR CAPA
             ============================ */
+            // Zonas sanitarias: id ("0".."6") desde zonas.geojson (formato nuevo: Zonass/ZONA; viejo: name "ZONA N")
+            const coloresZonas = {
+                "0": "#005288", "1": "#097138", "2": "#fada80", "3": "#ce93d8",
+                "4": "#795548", "5": "#f48fb1", "6": "#000000"
+            };
+            function zonaIdDe(props = {}) {
+                if (props.Zonass !== undefined && props.Zonass !== null) return String(props.Zonass).trim();
+                if (props.ZONA !== undefined && props.ZONA !== null) return String(parseInt(props.ZONA));
+                return (props.name || '').replace('ZONA ', '').trim();
+            }
+            function zonaLabel(id) { return id === '0' ? 'ZONA 0 - CENTRAL' : `ZONA ${id}`; }
+
             const estilos = (feature, layerName = "") => {
                 if (layerName === "SECCIONALES") {
                     const id = feature.properties?.seccional || "";
@@ -940,6 +1006,10 @@
                     return { color: colorPorSeccional(secc), weight: 1.5, opacity: 0.9, fillColor: colorPorSeccional(secc), fillOpacity: 0.12 };
                 }
                 const p = feature.properties || {};
+                if (layerName === "" && !p.fill && (p.Zonass !== undefined || p.ZONA !== undefined)) {
+                    const c = coloresZonas[zonaIdDe(p)] || '#3388ff';
+                    return { color: c, weight: 2.5, opacity: 1, fillColor: c, fillOpacity: 0.3 };
+                }
                 return {
                     color: p.stroke || '#3388ff',
                     weight: p['stroke-width'] || 2,
@@ -954,7 +1024,7 @@
                 if (layerName === 'SECCIONALES' && props.seccional) return `Seccional ${props.seccional}`;
                 if (layerName === 'ENTEMETROPOLITANO' && props.hasOwnProperty('localidad')) return props.localidad;
                 if (layerName === 'DEPARTAMENTOS' && props.hasOwnProperty('nombre_departamento')) return props.nombre_departamento;
-                if (layerName === 'AP' && props.hasOwnProperty('id_area')) return props.id_area;
+                if (layerName === 'AP' && props.hasOwnProperty('areaprogr')) return `AP ${props.areaprogr}${props.cpc ? ' - ' + props.cpc : ''}`;
                 if (props.name) return props.name;
                 if (props.NOM_ZONA) return props.NOM_ZONA;
                 if (props.CODIGO) return props.CODIGO;
@@ -976,14 +1046,14 @@
             /* ============================
                CARGA DATOS
             ============================ */
-            const urlBase = "https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/layers/";
+            const urlBase = "layers/";
 
-            const fetchEfectores    = fetch("https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/data/efectores.geojson").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-            const fetchZonasGeo     = fetch("https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/layers/zonas.geojson").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-            const fetchZonasValores = fetch("https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/data/zonas_valores.json").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+            const fetchEfectores    = fetch("data/efectores.geojson").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+            const fetchZonasGeo     = fetch("layers/zonas.geojson").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+            const fetchZonasValores = fetch("data/zonas_valores.json").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
 
             // centros_horarios se carga por separado para no bloquear el mapa si falla
-            fetch("https://reporteyanalisisdedatos.github.io/Mapa-Sanitario-Municipal-2026/data/centros_horarios.json")
+            fetch("data/centros_horarios.json")
                 .then(r => r.ok ? r.json() : Promise.reject('404'))
                 .then(data => {
                     establecimientosData = (data.data || []).filter(d => d.lat && d.lng);
@@ -1090,7 +1160,7 @@
                 DEPARTAMENTOS: "DEPARTAMENTOS.json",
                 LOCALIDADES: "LOCALIDADES.json",
                 ENTEMETROPOLITANO: "ENTEMETROPOLITANO.json",
-                AP: "AP.json"
+                AP: "AP.geojson"
             };
 
             const _fetchCache = {};
@@ -1157,31 +1227,31 @@
                 const zonaDrop = document.getElementById('zonaDrop');
 
                 zonasFeatures.sort((a, b) => {
-                    const idA = parseInt((a.properties.name || '').replace('ZONA ', ''));
-                    const idB = parseInt((b.properties.name || '').replace('ZONA ', ''));
+                    const idA = parseInt(zonaIdDe(a.properties));
+                    const idB = parseInt(zonaIdDe(b.properties));
                     return idA - idB;
                 });
                 zonasFeatures.forEach(feature => {
-                    const zona_id_str = (feature.properties.name || '').replace('ZONA ', '').trim();
+                    const zona_id_str = zonaIdDe(feature.properties);
                     if (zona_id_str) {
                         // select oculto
                         const option = document.createElement('option');
                         option.value = zona_id_str;
-                        option.textContent = `ZONA ${zona_id_str}`;
+                        option.textContent = zonaLabel(zona_id_str);
                         selZONA.appendChild(option);
 
                         // dropdown visual
                         const item = document.createElement('div');
                         item.className = 'ms-item';
                         item.dataset.value = zona_id_str;
-                        item.textContent = `ZONA ${zona_id_str}`;
+                        item.textContent = zonaLabel(zona_id_str);
                         item.style.cursor = 'pointer';
                         item.style.padding = '8px 12px';
                         item.style.fontSize = '13px';
                         item.style.fontWeight = '500';
                         item.addEventListener('click', () => {
                             selZONA.value = zona_id_str;
-                            zonaBtn.textContent = `ZONA ${zona_id_str}`;
+                            zonaBtn.textContent = zonaLabel(zona_id_str);
                             zonaDrop.classList.remove('open');
                             selZONA.dispatchEvent(new Event('change'));
                         });
@@ -1226,12 +1296,12 @@
                             {
                                 style: estilos,
                                 onEachFeature: (feature, layer) => {
-                                    const zona_id_str = (feature.properties.name || '').replace('ZONA ', '').trim();
+                                    const zona_id_str = zonaIdDe(feature.properties);
                                     const zona_id = parseInt(zona_id_str) || 0;
                                     layer.on('click', () => {
                                         selZONA.value = zona_id_str;
                                         const zonaBtn = document.getElementById('zonaBtn');
-                                        if (zonaBtn) zonaBtn.textContent = `ZONA ${zona_id_str}`;
+                                        if (zonaBtn) zonaBtn.textContent = zonaLabel(zona_id_str);
                                         mostrarEfectoresPorZona(zona_id);
                                         map.fitBounds(layer.getBounds(), { padding: [50, 50] });
                                         zonaInfoPanel.style.display = 'flex';
@@ -1247,7 +1317,7 @@
 
                     } else if (selectedValue) {
                         const selectedFeature = allZonasFeatures.find(f =>
-                            (f.properties.name || '').replace('ZONA ', '').trim() === selectedValue
+                            zonaIdDe(f.properties) === selectedValue
                         );
                         if (selectedFeature) {
                             const zona_id = parseInt(selectedValue);
@@ -1298,6 +1368,119 @@
                     if (capasLabels[nombre]) map.removeLayer(capasLabels[nombre]);
                     map.setView([-31.42, -64.18], 13);
                 }
+            }
+
+            /* ============================
+               IVS - ÍNDICE DE VULNERABILIDAD SOCIAL (polygons_4326.geojson)
+            ============================ */
+            const ivsNiveles = [
+                { id: '1', label: 'IVS 1 - Muy alta', color: '#C0504D' },
+                { id: '2', label: 'IVS 2 - Alta',     color: '#E8845C' },
+                { id: '3', label: 'IVS 3 - Media',    color: '#F2D35B' },
+                { id: '4', label: 'IVS 4 - Baja',     color: '#86CC93' },
+                { id: '5', label: 'IVS 5 - Muy baja', color: '#3F9163' },
+                { id: '',  label: 'Sin dato',         color: '#BDBDBD' }
+            ];
+            const ivsNivelDe = props => String(props?.ivs_2024_1 ?? '').trim();
+            const ivsNivelInfo = props => ivsNiveles.find(n => n.id === ivsNivelDe(props)) || ivsNiveles[5];
+
+            // Pane propio debajo de zonas/AP (overlayPane = 400) para no taparlas
+            map.createPane('ivsPane');
+            map.getPane('ivsPane').style.zIndex = 350;
+
+            let ivsGeojson = null;
+            let capaIVS = null;
+            const ivsSeleccionados = new Set();
+
+            const leyendaIVS = L.control({ position: 'bottomright' });
+            leyendaIVS.onAdd = () => {
+                const div = L.DomUtil.create('div', 'ivs-leyenda');
+                div.innerHTML = `<div class="ivs-leyenda-titulo">IVS 2024 (barrio)</div>` +
+                    ivsNiveles.map(n => `<div class="ivs-leyenda-item"><span class="ivs-swatch" style="background:${n.color}"></span>${n.label}</div>`).join('');
+                return div;
+            };
+
+            // Menú desplegable (mismo patrón que Establecimientos Públicos)
+            const ivsBtn  = document.getElementById('ivsBtn');
+            const ivsDrop = document.getElementById('ivsDrop');
+            const ivsList = document.getElementById('ivsList');
+
+            ivsNiveles.forEach(n => {
+                const item = document.createElement('label');
+                item.className = 'ms-item';
+                item.innerHTML = `
+                    <input type="checkbox" data-ivs="${n.id}" />
+                    <span class="ivs-swatch" style="background:${n.color}"></span>
+                    <span>${n.label}</span>`;
+                ivsList.appendChild(item);
+            });
+
+            ivsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                ivsDrop.classList.toggle('open');
+            });
+            document.addEventListener('click', () => ivsDrop.classList.remove('open'));
+            ivsDrop.addEventListener('click', e => e.stopPropagation());
+
+            document.getElementById('ivsAll').addEventListener('click', () => {
+                ivsList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+            });
+            document.getElementById('ivsNone').addEventListener('click', () => {
+                ivsList.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            });
+
+            document.getElementById('ivsApply').addEventListener('click', () => {
+                ivsSeleccionados.clear();
+                ivsList.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => ivsSeleccionados.add(cb.dataset.ivs));
+                ivsDrop.classList.remove('open');
+
+                if (ivsSeleccionados.size === 0) {
+                    ivsBtn.textContent = 'Seleccionar nivel...';
+                    dibujarIVS();
+                    map.removeControl(leyendaIVS);
+                    return;
+                }
+
+                const cantidad = ivsSeleccionados.size;
+                ivsBtn.textContent = cantidad === ivsNiveles.length ? 'Todos los niveles'
+                    : cantidad === 1 ? ivsNiveles.find(n => ivsSeleccionados.has(n.id)).label
+                    : `${cantidad} niveles seleccionados`;
+
+                leyendaIVS.addTo(map);
+                const cargar = ivsGeojson ? Promise.resolve() :
+                    fetch('layers/polygons_4326.geojson')
+                        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+                        .then(data => { ivsGeojson = data; });
+                cargar
+                    .then(() => {
+                        dibujarIVS();
+                        if (capaIVS && capaIVS.getBounds().isValid()) map.fitBounds(capaIVS.getBounds(), { padding: [30, 30] });
+                    })
+                    .catch(err => {
+                        console.error('No se pudo cargar polygons_4326.geojson:', err);
+                        ivsSeleccionados.clear();
+                        ivsBtn.textContent = 'Seleccionar nivel...';
+                        map.removeControl(leyendaIVS);
+                    });
+            });
+
+            function dibujarIVS() {
+                if (capaIVS) { map.removeLayer(capaIVS); capaIVS = null; }
+                if (!ivsGeojson || ivsSeleccionados.size === 0) return;
+                capaIVS = L.geoJSON(ivsGeojson, {
+                    pane: 'ivsPane',
+                    filter: f => ivsSeleccionados.has(ivsNivelDe(f.properties)),
+                    style: f => ({
+                        color: '#ffffff', weight: 0.8, opacity: 0.9,
+                        fillColor: ivsNivelInfo(f.properties).color, fillOpacity: 0.55
+                    }),
+                    onEachFeature: (feature, layer) => {
+                        const p = feature.properties || {};
+                        layer.bindTooltip(`<strong>${p.ivs_2024_v || 'Sin nombre'}</strong><br>${ivsNivelInfo(p).label}`, { sticky: true });
+                        layer.on('mouseover', () => layer.setStyle({ weight: 2, color: '#333' }));
+                        layer.on('mouseout',  () => capaIVS && capaIVS.resetStyle(layer));
+                    }
+                }).addTo(map);
             }
 
             /* ============================
